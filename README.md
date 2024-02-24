@@ -9,8 +9,9 @@ Notion.nvim is a Neovim plugin that allows you to interact with Notion.so from N
 
 Is is developed to simplfy adding issue numbers to git commits.
 
-Currenlty it only supports searching for issues in a database and inserting the issue number in the current buffer.
+Currently it only supports searching for issues in a database and inserting the issue number in the current buffer.
 Searching for issues is done using [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim).
+
 
 ## Installation
 

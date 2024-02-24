@@ -31,7 +31,6 @@ func (c *CLI) getIssueDBMap(dbID string) (IssueDBSpec, error) {
 		if _, ok := prop.(*notionapi.StatusPropertyConfig); ok {
 			propMap.Status = name
 		}
-
 	}
 
 	if propMap.ID == "" || propMap.Title == "" {
