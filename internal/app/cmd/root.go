@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -35,11 +37,15 @@ func getRootCmd() *cobra.Command {
 }
 
 func Execute() {
+	logrus.SetOutput(os.Stderr)
+
+	start := time.Now()
 	rootCmd := getRootCmd()
 	rootCmd.AddCommand(getDBIssueCmd())
 	rootCmd.AddCommand(getDBIssueDetailCmd())
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		logrus.Error(err)
 		os.Exit(1)
 	}
+	logrus.Debugf("Execution took: %s", time.Since(start))
 }

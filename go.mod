@@ -5,6 +5,7 @@ go 1.21.1
 require (
 	github.com/MichaelMure/go-term-markdown v0.1.4
 	github.com/jomei/notionapi v1.12.10
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 )
 

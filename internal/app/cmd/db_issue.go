@@ -6,9 +6,11 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jomei/notionapi"
 	"github.com/nousefreak/notion.nvim/internal/app/cli"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
@@ -50,6 +52,17 @@ URL
 
 ---
 `
+
+				meta := ""
+				for _, prop := range issue.Properties {
+					if len(prop.Values) != 0 {
+						meta += fmt.Sprintf("\n\n__%s__: %s", prop.Name, strings.Join(prop.Values, ", "))
+					}
+				}
+				if meta != "" {
+					props += meta + "\n\n---\n\n"
+				}
+
 				content := props + strings.Join(issue.Content, "\n")
 				width, _, err := term.GetSize(0)
 				if err != nil {
@@ -90,14 +103,16 @@ func getDBIssueCmd() *cobra.Command {
 				filterAssigned,
 			)
 			if err != nil {
-				log.Fatal(err)
+				logrus.Fatal(err)
 			}
 
+			start := time.Now()
 			data, err := json.Marshal(issues)
 			if err != nil {
-				log.Fatal(err)
+				logrus.Fatal(err)
 			}
 			fmt.Println(string(data))
+			logrus.Debugf("Format took: %s", time.Since(start))
 		},
 	}
 

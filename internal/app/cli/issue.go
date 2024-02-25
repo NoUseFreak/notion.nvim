@@ -6,8 +6,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jomei/notionapi"
+	"github.com/sirupsen/logrus"
 )
 
 func (c *CLI) getIssueDBMap(dbID string) (IssueDBSpec, error) {
@@ -75,57 +77,19 @@ func (c *CLI) GetIssue(dbID string, issueID string) (Issue, error) {
 	}
 
 	result := response.Results[0]
+	issue := c.utils.pageToIssue(result)
 
-	page, err := c.client.Block.GetChildren(c.ctx, notionapi.BlockID(result.ID), nil)
+	children, err := c.client.Block.GetChildren(c.ctx, notionapi.BlockID(result.ID), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	content := []string{}
-	for _, block := range page.Results {
-		content = append(content, markdownifyBlock(block))
+	for _, block := range children.Results {
+		content = append(content, c.utils.markdownifyBlock(block))
 	}
+	issue.Content = content
 
-	return Issue{
-		ID:    getPropString(getPropByType(result.Properties, notionapi.PropertyTypeUniqueID)),
-		Title: getPropString(getPropByType(result.Properties, notionapi.PropertyTypeTitle)),
-		Assignees: (func() []string {
-			assignees := []string{}
-			for _, assignee := range getPropByType(result.Properties, notionapi.PropertyTypePeople).(*notionapi.PeopleProperty).People {
-				assignees = append(assignees, assignee.Name)
-			}
-			return assignees
-		})(),
-		URL:     result.URL,
-		Content: content,
-	}, nil
-}
-
-func markdownifyBlock(block notionapi.Block) string {
-	switch block.GetType() {
-	case notionapi.BlockTypeParagraph:
-		return block.GetRichTextString()
-	case notionapi.BlockTypeHeading1:
-		return fmt.Sprintf("# %s", block.GetRichTextString())
-	case notionapi.BlockTypeHeading2:
-		return fmt.Sprintf("## %s", block.GetRichTextString())
-	case notionapi.BlockTypeHeading3:
-		return fmt.Sprintf("### %s", block.GetRichTextString())
-	case notionapi.BlockTypeBulletedListItem:
-		return fmt.Sprintf("* %s", block.GetRichTextString())
-	case notionapi.BlockTypeNumberedListItem:
-		return fmt.Sprintf("1. %s", block.GetRichTextString())
-	case notionapi.BlockTypeToDo:
-		return fmt.Sprintf("- [ ] %s", block.GetRichTextString())
-	case notionapi.BlockTypeToggle:
-		return fmt.Sprintf("::: details\n%s\n:::", block.GetRichTextString())
-	case notionapi.BlockTypeChildPage:
-		return fmt.Sprintf("[%s](%s)", block.GetRichTextString(), block.GetRichTextString())
-	case notionapi.BlockTypeUnsupported:
-		return ""
-	default:
-		return ""
-	}
+	return issue, nil
 }
 
 func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issue, error) {
@@ -199,6 +163,7 @@ func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issu
 		filter = append(filter, &filterParts)
 	}
 
+	start := time.Now()
 	response, err := c.client.Database.Query(c.ctx, notionapi.DatabaseID(dbID), &notionapi.DatabaseQueryRequest{
 		Filter: filter,
 		Sorts: []notionapi.SortObject{
@@ -212,22 +177,26 @@ func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issu
 	if err != nil {
 		log.Fatal(err)
 	}
+	logrus.Debugf("Query took: %s", time.Since(start))
 
+	start = time.Now()
 	issues := []Issue{}
+
+	channel := make(chan Issue)
 	for _, result := range response.Results {
-		issues = append(issues, Issue{
-			ID:    getPropString(getPropByType(result.Properties, notionapi.PropertyTypeUniqueID)),
-			Title: getPropString(getPropByType(result.Properties, notionapi.PropertyTypeTitle)),
-			Assignees: (func() []string {
-				assignees := []string{}
-				for _, assignee := range getPropByType(result.Properties, notionapi.PropertyTypePeople).(*notionapi.PeopleProperty).People {
-					assignees = append(assignees, assignee.Name)
-				}
-				return assignees
-			})(),
-			URL: result.URL,
-		})
+		go func(result notionapi.Page) {
+			start := time.Now()
+			issue := c.utils.pageToIssue(result)
+			logrus.Debugf("Processing item %s took %s", issue.ID, time.Since(start))
+			channel <- issue
+		}(result)
 	}
+
+	for range response.Results {
+		issues = append(issues, <-channel)
+	}
+
+	logrus.Debugf("Processing took: %s", time.Since(start))
 
 	return issues, nil
 }
