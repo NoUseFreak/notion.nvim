@@ -163,15 +163,13 @@ func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issu
 		filter = append(filter, &filterParts)
 	}
 
+	return c.doQuery(dbID, filter)
+}
+
+func (c *CLI) doQuery(dbID string, filter notionapi.Filter) ([]Issue, error) {
 	start := time.Now()
 	response, err := c.client.Database.Query(c.ctx, notionapi.DatabaseID(dbID), &notionapi.DatabaseQueryRequest{
-		Filter: filter,
-		Sorts: []notionapi.SortObject{
-			{
-				Property:  propMap.Title,
-				Direction: notionapi.SortOrderASC,
-			},
-		},
+		Filter:   filter,
 		PageSize: 100,
 	})
 	if err != nil {
