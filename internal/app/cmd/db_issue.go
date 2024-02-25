@@ -50,18 +50,18 @@ Assignees
 URL
 : ` + issue.URL + `
 
----
 `
 
 				meta := ""
 				for _, prop := range issue.Properties {
 					if len(prop.Values) != 0 {
-						meta += fmt.Sprintf("\n\n__%s__: %s", prop.Name, strings.Join(prop.Values, ", "))
+						meta += fmt.Sprintf(": __%s__: %s\n", prop.Name, strings.Join(prop.Values, ", "))
 					}
 				}
 				if meta != "" {
-					props += meta + "\n\n---\n\n"
+					props += "Properties\n" + meta
 				}
+				props += "\n\n---\n\n"
 
 				content := props + strings.Join(issue.Content, "\n")
 				width, _, err := term.GetSize(0)
