@@ -104,7 +104,8 @@ var pageTitleCache = sync.Map{}
 
 func (u *utils) getPageTitle(id notionapi.PageID) *string {
 	if title, ok := pageTitleCache.Load(id); ok {
-		return title.(*string)
+		t := title.(string)
+		return &t
 	}
 
 	page, err := u.client.Page.Get(u.ctx, id)

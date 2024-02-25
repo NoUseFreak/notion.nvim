@@ -92,7 +92,13 @@ func (c *CLI) GetIssue(dbID string, issueID string) (Issue, error) {
 	return issue, nil
 }
 
-func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issue, error) {
+type GetIssuesInput struct {
+	Search        string
+	User          string
+	IncludeClosed bool
+}
+
+func (c *CLI) GetIssues(dbID string, input GetIssuesInput) ([]Issue, error) {
 	propMap, err := c.getIssueDBMap(dbID)
 	if err != nil {
 		return nil, err
@@ -102,7 +108,7 @@ func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issu
 
 	var filter notionapi.AndCompoundFilter
 	var filterParts notionapi.AndCompoundFilter
-	for _, part := range strings.Split(search, " ") {
+	for _, part := range strings.Split(input.Search, " ") {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
@@ -138,26 +144,23 @@ func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issu
 		}
 	}
 
-	if filterAssigned {
-		user, err := c.client.User.Me(c.ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		filterParts = append(filterParts, notionapi.PropertyFilter{
+	if input.User != "" {
+		filter = append(filter, notionapi.PropertyFilter{
 			Property: propMap.Assignees,
 			People: &notionapi.PeopleFilterCondition{
-				Contains: user.ID.String(),
+				Contains: input.User,
 			},
 		})
 	}
 
-	filter = append(filter, &notionapi.PropertyFilter{
-		Property: propMap.Status,
-		Status: &notionapi.StatusFilterCondition{
-			DoesNotEqual: "done",
-		},
-	})
+	if !input.IncludeClosed {
+		filter = append(filter, &notionapi.PropertyFilter{
+			Property: propMap.Status,
+			Status: &notionapi.StatusFilterCondition{
+				DoesNotEqual: "done",
+			},
+		})
+	}
 
 	if len(filterParts) > 0 {
 		filter = append(filter, &filterParts)
@@ -166,12 +169,21 @@ func (c *CLI) GetIssues(dbID string, search string, filterAssigned bool) ([]Issu
 	return c.doQuery(dbID, filter)
 }
 
-func (c *CLI) doQuery(dbID string, filter notionapi.Filter) ([]Issue, error) {
+func (c *CLI) doQuery(dbID string, filter notionapi.AndCompoundFilter) ([]Issue, error) {
 	start := time.Now()
-	response, err := c.client.Database.Query(c.ctx, notionapi.DatabaseID(dbID), &notionapi.DatabaseQueryRequest{
-		Filter:   filter,
-		PageSize: 100,
-	})
+	limit := 100
+	var response *notionapi.DatabaseQueryResponse
+	var err error
+	if len(filter) == 0 {
+		response, err = c.client.Database.Query(c.ctx, notionapi.DatabaseID(dbID), &notionapi.DatabaseQueryRequest{
+			PageSize: limit,
+		})
+	} else {
+		response, err = c.client.Database.Query(c.ctx, notionapi.DatabaseID(dbID), &notionapi.DatabaseQueryRequest{
+			Filter:   filter,
+			PageSize: limit,
+		})
+	}
 	if err != nil {
 		log.Fatal(err)
 	}

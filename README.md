@@ -44,7 +44,9 @@ go install github.com/nousefreak/notion.nvim/cmd/notion.nvim@latest
     config = function()
       require('telescope').load_extension 'notion'
 
-      vim.keymap.set('n', '<leader>no', require('notion.builtin').issue_static, {})
+      vim.keymap.set('n', '<leader>na', require('notion.builtin').issues_all, { noremap = true, silent = true })
+      vim.keymap.set('n', '<leader>ni', require('notion.builtin').issues, { noremap = true, silent = true })
+      vim.keymap.set('n', '<leader>no', require('notion.builtin').issues_owned, { noremap = true, silent = true })
     end,
   },
 ```

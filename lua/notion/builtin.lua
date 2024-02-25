@@ -80,57 +80,15 @@ local function showLoading(msg, fetch_fn, complete_fn)
     )
 end
 
-M.issue_dynamic = function(opts)
+local function queryList(opts, fetch_fn, type)
     opts = opts or {}
 
     if not startup_checks() then
         return
     end
 
-    pickers
-        .new({
-            opts,
-        }, {
-            prompt_title = 'Notion Issues',
-            debounce = 50,
-            finder = require('telescope.finders').new_dynamic {
-                fn = function(prompt)
-                    if prompt == '' or #prompt < 3 then
-                        return {}
-                    end
-                    local response = notion_api('db-issue', prompt)
-                    local result = {}
-                    for _, line in ipairs(response) do
-                        for _, issue in ipairs(line) do
-                            table.insert(result, issue)
-                        end
-                    end
-                    return result
-                end,
-                entry_maker = notion_entity_maker,
-            },
-            sorter = require('telescope.config').values.generic_sorter {},
-            previewer = ncli_previewers.issue_previewer,
-            attach_mappings = function(_, map)
-                actions.select_default:replace(ncli_actions.issue_insert)
-                map('i', '<C-x>', ncli_actions.webview_issue)
-                map('n', '<C-x>', ncli_actions.webview_issue)
-
-                return true
-            end,
-        })
-        :find()
-end
-
-M.issue_static = function(opts)
-    opts = opts or {}
-
-    if not startup_checks() then
-        return
-    end
-
-    showLoading('Loading Issues', function()
-        local response = notion_api('db-issue', '')
+    showLoading('Loading Issues - ' .. type, function()
+        local response = fetch_fn()
         local result = {}
         for _, line in ipairs(response) do
             for _, issue in ipairs(line) do
@@ -141,7 +99,8 @@ M.issue_static = function(opts)
     end, function(result)
         pickers
             .new(opts, {
-                prompt_title = 'Notion Issues',
+                prompt_title = 'Filter',
+                results_title = 'Notion Issues - ' .. type,
                 debounce = 50,
                 finder = require('telescope.finders').new_table {
                     results = result,
@@ -159,6 +118,24 @@ M.issue_static = function(opts)
             })
             :find()
     end)
+end
+
+M.issues = function(opts)
+    return queryList(opts, function()
+        return notion_api('db-issue', '')
+    end, 'Open')
+end
+
+M.issues_all = function(opts)
+    return queryList(opts, function()
+        return notion_api('db-issue', '--include-closed')
+    end, 'All')
+end
+
+M.issues_owned = function(opts)
+    return queryList(opts, function()
+        return notion_api('db-issue', '--owner=' .. ncli_config.get_user_id())
+    end, 'Owned')
 end
 
 return M

@@ -11,8 +11,9 @@ return require('telescope').register_extension {
         }
     end,
     exports = {
-        issues = ncli_builtins.issue_static,
-        issues_dynamic = ncli_builtins.issue_dynamic,
+        open = ncli_builtins.issues,
+        all = ncli_builtins.issues_all,
+        owned = ncli_builtins.issues_owned,
     },
     health = function()
         local health = vim.health or require 'health'

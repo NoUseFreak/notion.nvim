@@ -102,13 +102,19 @@ func getDBIssueCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			token := os.Getenv("NOTION_INTEGRATION_TOKEN")
 			dbID, _ := cmd.Flags().GetString("db-id")
-			filterAssigned, _ := cmd.Flags().GetBool("owned")
+			owner, _ := cmd.Flags().GetString("owner")
+			includeClosed, _ := cmd.Flags().GetBool("include-closed")
+
+			input := cli.GetIssuesInput{
+				Search:        strings.Join(args, " "),
+				User:          owner,
+				IncludeClosed: includeClosed,
+			}
 
 			cli := cli.New(notionapi.NewClient(notionapi.Token(token)), cmd.Context())
 			issues, err := cli.GetIssues(
 				dbID,
-				strings.Join(args, " "),
-				filterAssigned,
+				input,
 			)
 			if err != nil {
 				logrus.Fatal(err)
@@ -125,7 +131,8 @@ func getDBIssueCmd() *cobra.Command {
 	}
 
 	cmd.Flags().String("db-id", "", "The ID of the database to query")
-	cmd.Flags().Bool("owned", false, "Filter issues assigned to the user")
+	cmd.Flags().String("owner", "", "Filter issues assigned to this user")
+	cmd.Flags().Bool("include-closed", false, "Include closed issues")
 
 	cmd.MarkFlagRequired("db-id")
 
