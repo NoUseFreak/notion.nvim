@@ -42,8 +42,8 @@ end
 local notion_entity_maker = function(issue)
     return {
         value = issue.id,
-        ordinal = issue.id .. '\t' .. issue.title,
-        display = issue.id .. '\t' .. issue.title,
+        ordinal = issue.id .. ' ' .. issue.title .. ' ' .. table.concat(issue.assignees or {}, ' '),
+        display = issue.id .. string.rep(' ', 10 - #issue.id) .. ' ' .. issue.title,
     }
 end
 
@@ -140,9 +140,7 @@ M.issue_static = function(opts)
         return result
     end, function(result)
         pickers
-            .new({
-                opts,
-            }, {
+            .new(opts, {
                 prompt_title = 'Notion Issues',
                 debounce = 50,
                 finder = require('telescope.finders').new_table {
@@ -150,23 +148,6 @@ M.issue_static = function(opts)
                     entry_maker = notion_entity_maker,
                 },
                 sorter = require('telescope.config').values.generic_sorter {},
-                -- previewer = require('telescope.previewers').new_buffer_previewer {
-                --     define_preview = function(self, entry, status)
-                --         return require('telescope.previewers.utils').job_maker(
-                --             { 'notion.nvim', 'db-issue-detail', '--render-content', '--db-id=' .. ncli_config.get_db_id(), entry.value },
-                --             self.state.bufnr,
-                --             {
-                --                 bufname = self.state.bufname,
-                --                 value = entry,
-                --                 callback = function(bufnr, content)
-                --                     if content ~= nil then
-                --                         require('telescope.previewers.utils').highlighter(bufnr, 'setl filetype=terminal')
-                --                     end
-                --                 end,
-                --             }
-                --         )
-                --     end,
-                -- },
                 previewer = ncli_previewers.issue_previewer,
                 attach_mappings = function(_, map)
                     actions.select_default:replace(ncli_actions.issue_insert)

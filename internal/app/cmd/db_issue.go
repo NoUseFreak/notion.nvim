@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gomarkdown/markdown/parser"
 	"github.com/jomei/notionapi"
 	"github.com/nousefreak/notion.nvim/internal/app/cli"
 	"github.com/sirupsen/logrus"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/term"
 
 	markdown "github.com/MichaelMure/go-term-markdown"
+	md "github.com/gomarkdown/markdown"
 )
 
 func getDBIssueDetailCmd() *cobra.Command {
@@ -69,7 +71,13 @@ URL
 					width = 80
 				}
 
-				fmt.Println(string(markdown.Render(content, width, 0)))
+				exts := markdown.Extensions()
+				exts ^= parser.Autolink
+				p := parser.NewWithExtensions(exts)
+				nodes := md.Parse([]byte(content), p)
+				renderer := markdown.NewRenderer(width, 1)
+
+				fmt.Println(string(md.Render(nodes, renderer)))
 			} else {
 				data, err := json.Marshal(issue)
 				if err != nil {
