@@ -60,7 +60,8 @@ This file should contain the following fields:
 ```json
 {
   "apiKey": "your-api",
-  "dbId": "your-db-id"
+  "dbId": "your-db-id",
+  "userID": "your-user-id"
 }
 ```
 
@@ -74,4 +75,16 @@ Open the database you want to use and copy the id from the URL. It should look s
 
 Note you may have to grant the intergration access to the database. This can be done by the hamburger menu in the top right corner of the database view.
 In the menu under Connections you can `Connect to` the integration.
+
+### Getting the user id
+
+Not sure if a cleaner way exists. But you can get the user id by inspecting the local storage of the Notion web app.
+
+```
+JSON.parse(localStorage.getItem("gist.web.userToken")).value
+```
+
+## Keybindings
+
+In the list of issues you can use `CTRL-X` to open the issue in the browser.
 

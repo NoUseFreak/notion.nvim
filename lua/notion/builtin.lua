@@ -44,6 +44,7 @@ local notion_entity_maker = function(issue)
         value = issue.id,
         ordinal = issue.id .. ' ' .. issue.title .. ' ' .. table.concat(issue.assignees or {}, ' '),
         display = issue.id .. string.rep(' ', 10 - #issue.id) .. ' ' .. issue.title,
+        _url = issue.url,
     }
 end
 
