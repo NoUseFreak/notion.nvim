@@ -3,15 +3,16 @@ package cli
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/jomei/notionapi"
+	"github.com/nousefreak/notion.nvim/internal/app/cache"
 	"github.com/sirupsen/logrus"
 )
 
 type utils struct {
 	ctx    context.Context
 	client *notionapi.Client
+	cache  *cache.Cache
 }
 
 func (u *utils) getPropByType(props map[string]notionapi.Property, propType notionapi.PropertyType) notionapi.Property {
@@ -100,13 +101,14 @@ func (u *utils) pageToIssue(page notionapi.Page) Issue {
 	return issue
 }
 
-var pageTitleCache = sync.Map{}
-
 func (u *utils) getPageTitle(id notionapi.PageID) *string {
-	if title, ok := pageTitleCache.Load(id); ok {
-		t := title.(string)
-		return &t
+	loadCache()
+
+	if title, err := diskCache.Get(id.String()); err == nil && title != "" {
+		logrus.Debugf("Cache hit for page title: %s", id)
+		return &title
 	}
+	logrus.Debugf("Cache miss for page title: %s", id)
 
 	page, err := u.client.Page.Get(u.ctx, id)
 	if err != nil {
@@ -117,7 +119,10 @@ func (u *utils) getPageTitle(id notionapi.PageID) *string {
 	for _, prop := range page.Properties {
 		if prop.GetType() == notionapi.PropertyTypeTitle {
 			title := u.getPropString(prop)
-			pageTitleCache.Store(id, title)
+			err := diskCache.Set(id.String(), title)
+			if err != nil {
+				logrus.Errorf("Error setting cache for page title: %s", id)
+			}
 			return &title
 		}
 	}

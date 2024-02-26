@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -13,6 +14,16 @@ import (
 )
 
 func (c *CLI) getIssueDBMap(dbID string) (IssueDBSpec, error) {
+	start := time.Now()
+	loadCache()
+
+	if cached, err := diskCache.Get(dbID); err == nil {
+		var spec IssueDBSpec
+		if err := json.Unmarshal([]byte(cached), &spec); err == nil {
+			return spec, nil
+		}
+	}
+
 	db, err := c.client.Database.Get(c.ctx, notionapi.DatabaseID(dbID))
 	if err != nil {
 		return IssueDBSpec{}, err
@@ -38,6 +49,12 @@ func (c *CLI) getIssueDBMap(dbID string) (IssueDBSpec, error) {
 	if propMap.ID == "" || propMap.Title == "" {
 		return IssueDBSpec{}, fmt.Errorf("Database does not contain required properties")
 	}
+
+	if specJSON, err := json.Marshal(propMap); err == nil {
+		diskCache.Set(dbID, string(specJSON))
+	}
+
+	logrus.Debugf("getIssueDBMap took: %s", time.Since(start))
 
 	return propMap, nil
 }
@@ -104,11 +121,12 @@ func (c *CLI) GetIssues(dbID string, input GetIssuesInput) ([]Issue, error) {
 		return nil, err
 	}
 
+	start := time.Now()
 	re := regexp.MustCompile(fmt.Sprintf("^%s-([0-9]+)$", propMap.IDPrefix))
 
 	var filter notionapi.AndCompoundFilter
 	var filterParts notionapi.AndCompoundFilter
-	for _, part := range strings.Split(input.Search, " ") {
+	for _, part := range strings.Split(strings.TrimSpace(input.Search), " ") {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
@@ -166,6 +184,7 @@ func (c *CLI) GetIssues(dbID string, input GetIssuesInput) ([]Issue, error) {
 		filter = append(filter, &filterParts)
 	}
 
+	logrus.Debugf("Filter constructed in: %s", time.Since(start))
 	return c.doQuery(dbID, filter)
 }
 

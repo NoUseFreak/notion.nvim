@@ -30,10 +30,12 @@ func getDBIssueDetailCmd() *cobra.Command {
 			issueID := args[0]
 
 			cli := cli.New(notionapi.NewClient(notionapi.Token(token)), cmd.Context())
+			logrus.Debugf("Cli created in: %s", time.Since(startTime))
 			issue, err := cli.GetIssue(
 				dbID,
 				issueID,
 			)
+
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -105,17 +107,18 @@ func getDBIssueCmd() *cobra.Command {
 			owner, _ := cmd.Flags().GetString("owner")
 			includeClosed, _ := cmd.Flags().GetBool("include-closed")
 
-			input := cli.GetIssuesInput{
-				Search:        strings.Join(args, " "),
-				User:          owner,
-				IncludeClosed: includeClosed,
-			}
+			client := cli.New(notionapi.NewClient(notionapi.Token(token)), cmd.Context())
+			logrus.Debugf("Cli created in: %s", time.Since(startTime))
 
-			cli := cli.New(notionapi.NewClient(notionapi.Token(token)), cmd.Context())
-			issues, err := cli.GetIssues(
+			issues, err := client.GetIssues(
 				dbID,
-				input,
+				cli.GetIssuesInput{
+					Search:        strings.Join(args, " "),
+					User:          owner,
+					IncludeClosed: includeClosed,
+				},
 			)
+			logrus.Debugf("Issues fetched in: %s", time.Since(startTime))
 			if err != nil {
 				logrus.Fatal(err)
 			}

@@ -1,12 +1,12 @@
 package cli
 
 type IssueDBSpec struct {
-	ID        string
-	Title     string
-	Assignees string
-	Status    string
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Assignees string `json:"assignees"`
+	Status    string `json:"status"`
 
-	IDPrefix string
+	IDPrefix string `json:"id_prefix"`
 }
 
 type Issue struct {
