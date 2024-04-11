@@ -1,6 +1,6 @@
 local actions = require 'telescope.actions'
 local action_state = require 'telescope.actions.state'
-local ncli_config = require 'notion.config'
+local notion = require 'notion'
 
 --- actions
 local function close_telescope_prompt(prompt_bufnr)
@@ -15,7 +15,7 @@ local M = {}
 M.issue_insert = function(prompt_bufnr)
     local selection = close_telescope_prompt(prompt_bufnr)
     if vim.api.nvim_buf_get_option(vim.api.nvim_get_current_buf(), 'modifiable') then
-        vim.api.nvim_put({ ncli_config.config.prefix .. (selection.value or '') }, 'b', true, true)
+        vim.api.nvim_put({ notion.config.prefix .. (selection.value or '') }, 'b', true, true)
     end
 end
 

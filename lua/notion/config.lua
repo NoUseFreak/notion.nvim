@@ -5,14 +5,6 @@ local M = {
     _user_id = '',
 }
 
-M.config = {
-    prefix = '#',
-}
-
-M.setup = function(config)
-    M.config = vim.tbl_extend('force', M.config, config or {})
-end
-
 local function read_config_file()
     if M._loaded then
         return
